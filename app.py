@@ -16,7 +16,7 @@ DB_FILE = "tropafit_database.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    # Tabla de Usuarios con meta de peso/grasa
+    # Tabla de Usuarios
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
             username TEXT PRIMARY KEY,
@@ -27,6 +27,13 @@ def init_db():
             meta_peso REAL DEFAULT 70.0
         )
     ''')
+    
+    # Parche de seguridad: Asegurar que si la tabla ya existía sin la columna meta_peso, se agregue sola
+    try:
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN meta_peso REAL DEFAULT 70.0")
+    except sqlite3.OperationalError:
+        pass # La columna ya existe, no hace nada
+
     # Tabla de Mediciones Antropométricas por Usuario
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS mediciones (
@@ -208,12 +215,11 @@ else:
     if st.session_state['rol'] == "Atleta":
         atleta_actual = st.session_state['username']
         
-        # Buscar meta de peso del usuario
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
         cursor.execute("SELECT meta_peso FROM usuarios WHERE username = ?", (atleta_actual,))
         meta_res = cursor.fetchone()
-        meta_peso = meta_res[0] if meta_res else 70.0
+        meta_peso = meta_res[0] if meta_res and meta_res[0] is not None else 70.0
         conn.close()
         
         tab_medicion, tab_evolucion = st.tabs(["📝 Nueva Medición & Plan", "📈 Mi Evolución y Meta"])
@@ -335,7 +341,6 @@ else:
             conn.close()
             
             if not df_user.empty:
-                # Obtener el primer registro (Inicio) y el último (Actual)
                 inicio = df_user.iloc[0]
                 actual = df_user.iloc[-1]
                 
@@ -366,8 +371,9 @@ else:
             nombres_atletas = [a[0] for a in atletas_info]
             atleta_seleccionado = st.selectbox("Selecciona un Atleta de la Tropa:", nombres_atletas)
             
-            # Buscar meta del atleta seleccionado
             meta_atleta = [a[1] for a in atletas_info if a[0] == atleta_seleccionado][0]
+            if meta_atleta is None:
+                meta_atleta = 70.0
             
             df_atleta = pd.read_sql_query("SELECT * FROM mediciones WHERE username = ? ORDER BY fecha ASC", conn, params=(atleta_seleccionado,))
             conn.close()

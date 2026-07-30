@@ -16,7 +16,6 @@ DB_FILE = "tropafit_database.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    # Tabla de Usuarios
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
             username TEXT PRIMARY KEY,
@@ -27,14 +26,11 @@ def init_db():
             meta_peso REAL DEFAULT 70.0
         )
     ''')
-    
-    # Parche de seguridad: Asegurar que si la tabla ya existía sin la columna meta_peso, se agregue sola
     try:
         cursor.execute("ALTER TABLE usuarios ADD COLUMN meta_peso REAL DEFAULT 70.0")
     except sqlite3.OperationalError:
-        pass # La columna ya existe, no hace nada
+        pass
 
-    # Tabla de Mediciones Antropométricas por Usuario
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS mediciones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,10 +122,16 @@ st.markdown("""
         color: #a1a1aa;
         margin-bottom: 15px;
     }
+    .report-box {
+        background-color: #1e1e1e;
+        border: 1px solid #333333;
+        padding: 20px;
+        border-radius: 12px;
+        margin-top: 15px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# Renderizar Logo
 logo_path = "logo.png" if os.path.exists("logo.png") else ("input_file_1.png" if os.path.exists("input_file_1.png") else None)
 if logo_path:
     with open(logo_path, "rb") as f:
@@ -140,10 +142,9 @@ if logo_path:
         </div>
     """, unsafe_allow_html=True)
 
-st.markdown("<p style='text-align: center; color: #d4d4d8; font-size: 1.1rem; margin-top: 5px;'>Evaluación Antropométrica y Evolución hacia la Meta</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #d4d4d8; font-size: 1.1rem; margin-top: 5px;'>Informe de Composición Corporal & Evolución</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# --- CONTROL DE SESIÓN Y LOGIN ---
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
     st.session_state['username'] = ''
@@ -222,7 +223,7 @@ else:
         meta_peso = meta_res[0] if meta_res and meta_res[0] is not None else 70.0
         conn.close()
         
-        tab_medicion, tab_evolucion = st.tabs(["📝 Nueva Medición & Plan", "📈 Mi Evolución y Meta"])
+        tab_medicion, tab_evolucion = st.tabs(["📝 Nueva Medición & Informe", "📈 Mi Evolución y Meta"])
         
         with tab_medicion:
             st.markdown(f"### 👤 Carga de Perímetros: {atleta_actual}")
@@ -284,7 +285,7 @@ else:
             with c_ti4:
                 p_tobillo = st.number_input("L - P. Tobillo (cm)", value=22.0)
 
-            if st.button("🚀 Guardar Medición y Calcular Plan", use_container_width=True):
+            if st.button("🚀 Guardar Medición y Generar Informe", use_container_width=True):
                 if genero == "Masculino":
                     porcentaje_grasa = max(5.0, min(40.0, (1.20 * (peso / ((altura/100)**2))) + (0.23 * edad) - (10.8 * (p_cintura/altura)) - 5.4))
                 else:
@@ -293,6 +294,9 @@ else:
                 masa_grasa_kg = peso * (porcentaje_grasa / 100)
                 masa_magra_kg = peso - masa_grasa_kg
                 masa_muscular_kg = masa_magra_kg * 0.72
+                masa_osea_kg = peso * 0.14
+                masa_residual_kg = peso * 0.22 if genero == "Masculino" else peso * 0.24
+                
                 fecha_hoy = datetime.date.today().strftime("%Y-%m-%d")
 
                 conn = sqlite3.connect(DB_FILE)
@@ -308,33 +312,56 @@ else:
                       p_hombros, p_pecho, p_biceps_rel, p_biceps_con, p_antebrazo, p_munecca,
                       p_abdomen, p_cintura, p_caderas, p_muslo, p_rodilla, p_gemelos, p_tobillo,
                       round(porcentaje_grasa, 1), round(masa_muscular_kg, 1), round(masa_grasa_kg, 1)))
+                
+                cursor.execute("SELECT peso, porcentaje_grasa FROM mediciones WHERE username = ? ORDER BY fecha ASC LIMIT 1", (atleta_actual,))
+                primer_reg = cursor.fetchone()
                 conn.commit()
                 conn.close()
-                st.success("¡Medición guardada con éxito!")
+
+                dif_peso = round(peso - primer_reg[0], 2) if primer_reg else 0.0
+                dif_grasa = round(porcentaje_grasa - primer_reg[1], 2) if primer_reg else 0.0
 
                 st.markdown("---")
-                st.markdown(f"### 📊 Resultados de Composición: {atleta_actual}")
-                res_col1, res_col2, res_col3 = st.columns(3)
-                res_col1.metric("Porcentaje de Grasa", f"{porcentaje_grasa:.1f}%", f"{masa_grasa_kg:.1f} kg")
-                res_col2.metric("Masa Muscular Est.", f"{masa_muscular_kg:.1f} kg")
-                res_col3.metric("Masa Adiposa", f"{masa_grasa_kg:.1f} kg")
+                st.markdown(f"<h2 style='text-align: center; color: #a3e635;'>📋 INFORME DE COMPOSICIÓN CORPORAL</h2>", unsafe_allow_html=True)
+                st.markdown(f"<p style='text-align: center; color: #a1a1aa;'>Atleta: <b>{atleta_actual}</b> | Fecha: {fecha_hoy} | Edad: {edad} años</p>", unsafe_allow_html=True)
 
-                reporte_texto = f"""*⚡ TROPAFIT - INFORME ANTROPOMÉTRICO*
-*Atleta:* {atleta_actual}
-*Fecha:* {fecha_hoy}
-*Peso actual:* {peso} kg (Meta: {meta_peso} kg) | *Grasa:* {porcentaje_grasa:.1f}% | *Muscular:* {masa_muscular_kg:.1f} kg
+                tabla_datos = {
+                    "Fraccionamiento": ["Masa Adiposa", "Masa Muscular", "Masa Ósea", "Masa Residual", "Masa Total"],
+                    "Kg": [round(masa_grasa_kg, 2), round(masa_muscular_kg, 2), round(masa_osea_kg, 2), round(masa_residual_kg, 2), round(peso, 2)],
+                    "Porcentaje": [f"{round(porcentaje_grasa, 1)}%", f"{round((masa_muscular_kg/peso)*100, 1)}%", f"{round((masa_osea_kg/peso)*100, 1)}%", f"{round((masa_residual_kg/peso)*100, 1)}%", "100.0%"],
+                    "Dif. Inicio": [f"{dif_grasa:+.1f}%", f"-", f"-", f"-", f"{dif_peso:+.1f} kg"]
+                }
+                df_reporte = pd.DataFrame(tabla_datos)
+                st.dataframe(df_reporte, use_container_width=True)
+
+                tmb = (10 * peso) + (6.25 * altura) - (5 * edad) + (5 if genero == "Masculino" else -161)
+                gasto_est = tmb * 1.55
+                imc = peso / ((altura/100)**2)
+
+                col_d1, col_d2 = st.columns(2)
+                with col_d1:
+                    st.info(f"**Estimación Gasto Energético:**\n- Metabolismo Basal: {tmb:.0f} Kcal\n- Gasto Estimado (Mod): {gasto_est:.0f} Kcal")
+                with col_d2:
+                    st.success(f"**Datos Adicionales:**\n- IMC: {imc:.2f} Kg/m²\n- Peso Meta: {meta_peso} Kg\n- Diferencia a Meta: {round(peso - meta_peso, 1)} Kg")
+
+                reporte_texto = f"""*⚡ TROPAFIT - INFORME CLÍNICO ANTROPOMÉTRICO*
+*Atleta:* {atleta_actual} | *Fecha:* {fecha_hoy}
+- Peso Total: {peso} kg (Dif. Inicio: {dif_peso:+.1f} kg | Meta: {meta_peso} kg)
+- Masa Adiposa: {porcentaje_grasa:.1f}% ({masa_grasa_kg:.1f} kg)
+- Masa Muscular: {masa_muscular_kg:.1f} kg
+- Gasto Energético Est.: {gasto_est:.0f} Kcal
 """
                 whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote(reporte_texto)}"
                 st.markdown(f"""
                     <a href="{whatsapp_url}" target="_blank">
                         <button style="width: 100%; background: linear-gradient(135deg, #22c55e 0%, #15803d 100%); color: white; border: none; border-radius: 12px; padding: 0.6rem 1.5rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);">
-                            💬 Enviar Mi Reporte al Entrenador por WhatsApp
+                            💬 Compartir Informe Clínico por WhatsApp
                         </button>
                     </a>
                 """, unsafe_allow_html=True)
 
         with tab_evolucion:
-            st.markdown(f"### 📈 Tu Línea de Evolución vs. Inicio y Meta")
+            st.markdown(f"### 📈 Tu Línea de Evolución y Comparativa con el Inicio")
             
             conn = sqlite3.connect(DB_FILE)
             df_user = pd.read_sql_query("SELECT fecha, peso, porcentaje_grasa, masa_muscular, p_cintura FROM mediciones WHERE username = ? ORDER BY fecha ASC", conn, params=(atleta_actual,))
@@ -345,22 +372,22 @@ else:
                 actual = df_user.iloc[-1]
                 
                 col_m1, col_m2, col_m3 = st.columns(3)
-                col_m1.metric("🏁 Peso Inicial", f"{inicio['peso']} kg", f"Fecha: {inicio['fecha']}")
-                col_m2.metric("📍 Peso Actual", f"{actual['peso']} kg", f"{round(actual['peso'] - inicio['peso'], 1)} kg vs inicio")
+                col_m1.metric("🏁 1er Registro (Inicio)", f"{inicio['peso']} kg", f"Grasa: {inicio['porcentaje_grasa']}%")
+                col_m2.metric("📍 Registro Actual", f"{actual['peso']} kg", f"{round(actual['peso'] - inicio['peso'], 1)} kg vs inicio")
                 col_m3.metric("🎯 Peso Meta", f"{meta_peso} kg", f"Faltan: {round(actual['peso'] - meta_peso, 1)} kg")
                 
                 st.markdown("---")
-                st.subheader("📋 Tabla Histórica de Registros")
+                st.subheader("📋 Tabla Histórica de Evolución")
                 st.dataframe(df_user, use_container_width=True)
                 
-                st.subheader("📉 Gráfica de Tu Progreso")
+                st.subheader("📉 Gráfica de Progreso")
                 st.line_chart(df_user.set_index("fecha")[["peso", "porcentaje_grasa", "masa_muscular"]])
             else:
-                st.info("Aún no tienes registros guardados. Carga tu primera medición para activar tu línea de evolución.")
+                st.info("Aún no tienes registros guardados. Carga tu primera medición.")
 
     elif st.session_state['rol'] == "Entrenador":
         st.markdown("### 🏆 Panel de Control del Entrenador - Tropa")
-        st.write("Visualiza el progreso de tus atletas contrastando su **primer registro (inicio)**, su **estado actual** y su **meta**.")
+        st.write("Visualiza el informe clínico y comparativo de tus atletas.")
         
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
@@ -388,7 +415,7 @@ else:
                 col_e3.metric("🎯 Meta Establecida", f"{meta_atleta} kg")
                 
                 st.markdown("---")
-                st.markdown(f"#### Historial completo de: {atleta_seleccionado}")
+                st.markdown(f"#### Historial Clínico de: {atleta_seleccionado}")
                 st.dataframe(df_atleta, use_container_width=True)
                 
                 if len(df_atleta) > 1:

@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import os
 import base64
+import urllib.parse
 
 # --- CONFIGURACIÓN Y ESTÉTICA VISUAL ---
 st.set_page_config(page_title="Tropa | Antropometría por Perímetros", layout="wide", page_icon="⚡")
@@ -103,14 +104,14 @@ with pestana_nueva:
     st.markdown("### 📏 2. Toma de Perímetros (Protocolo Oficial)")
     st.markdown("<div class='card-info'>💡 Registra los perímetros en centímetros (cm) utilizando una cinta métrica flexible e inextensible. Despliega la guía visual abajo para ver exactamente la referencia de cada letra (A hasta L).</div>", unsafe_allow_html=True)
 
-    # --- GUÍA VISUAL CON LA IMAGEN INCORPORADA ---
+    # --- GUÍA VISUAL CON IMAGEN INCORPORADA ---
     with st.expander("🗺️ Ver Imagen Oficial de Referencia (A-L)", expanded=False):
         try:
             with open("input_file_4.png", "rb") as image_file:
                 encoded_img = base64.b64encode(image_file.read()).decode('utf-8')
             st.markdown(f'<img src="data:image/png;base64,{encoded_img}" style="width:100%; border-radius:12px; border: 1px solid #334155;" />', unsafe_allow_html=True)
         except Exception:
-            st.info("Guía visual de referencia (A a L)")
+            st.info("Guía visual de referencia (A a L) - Asegúrate de subir 'input_file_4.png' a tu repositorio de GitHub.")
         
         st.markdown("""
         * **A:** P. Hombros | **B:** P. Pecho | **C1:** P. Bíceps relajado | **C2:** P. Bíceps contraído
@@ -118,7 +119,6 @@ with pestana_nueva:
         * **H:** P. Caderas | **I:** P. Muslo | **J:** P. Rodilla | **K:** P. Gemelos | **L:** P. Tobillo
         """)
 
-    # Organizado según el estándar UGR
     st.markdown("#### **Tren Superior (Tronco y Brazos)**")
     c_ts1, c_ts2, c_ts3, c_ts4 = st.columns(4)
     with c_ts1:
@@ -224,49 +224,45 @@ with pestana_nueva:
             st.text(f"• Grasas: {gras:.0f} g ({gras*9:.0f} kcal)")
 
         st.markdown("---")
-        reporte_texto = f"""
-==================================================
-TROPA PERFORMANCE LAB - INFORME ANTROPOMÉTRICO
-Atleta: {nombre_alumno}
-Fecha: {fecha_hoy}
-==================================================
-- Disciplina: {disciplina}
-- Objetivo: {objetivo}
-- Peso (Balanza): {peso} kg | Altura: {altura} cm | Edad: {edad} años
+        reporte_texto = f"""*⚡ TROPA PERFORMANCE LAB - INFORME ANTROPOMÉTRICO*
+*Atleta:* {nombre_alumno}
+*Fecha:* {fecha_hoy}
 
-[PERÍMETROS REGISTRADOS (Protocolo Oficial)]
-- A. Hombros: {p_hombros} cm
-- B. Pecho: {p_pecho} cm
-- C1. Bíceps relajado: {p_biceps_rel} cm
-- C2. Bíceps contraído: {p_biceps_con} cm (Diferencia: +{indice_tono_brazo:.1f} cm)
-- D. Antebrazo: {p_antebrazo} cm
-- E. Muñeca: {p_munecca} cm
-- F. Abdomen: {p_abdomen} cm
-- G. Cintura: {p_cintura} cm
-- H. Caderas: {p_caderas} cm
-- I. Muslo: {p_muslo} cm
-- J. Rodilla: {p_rodilla} cm
-- K. Gemelos: {p_gemelos} cm
-- L. Tobillo: {p_tobillo} cm
+*Disciplina:* {disciplina}
+*Objetivo:* {objetivo}
+*Peso (Balanza):* {peso} kg | *Altura:* {altura} cm | *Edad:* {edad} años
 
-[COMPOSICIÓN CORPORAL ESTIMADA]
+*[COMPOSICIÓN CORPORAL ESTIMADA]*
 - Porcentaje de grasa: {porcentaje_grasa:.1f}% ({masa_grasa_kg:.1f} kg)
 - Masa muscular estimada: {masa_muscular_kg:.1f} kg
+- Tono / Diferencia de bíceps: +{indice_tono_brazo:.1f} cm
 
-[PLAN NUTRICIONAL]
+*[PLAN NUTRICIONAL]*
 - Calorías Objetivo: {calorias_objetivo:.0f} kcal
 - Proteínas: {prot:.0f} g
 - Carbohidratos: {carb:.0f} g
 - Grasas: {gras:.0f} g
-==================================================
 """
-        st.download_button(
-            label="📄 Descargar Informe Completo de Perímetros (.txt)",
-            data=reporte_texto,
-            file_name=f"Tropa_Perimetros_{nombre_alumno}_{fecha_hoy}.txt",
-            mime="text/plain",
-            use_container_width=True
-        )
+
+        # Botones de descarga y compartir por WhatsApp
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            st.download_button(
+                label="📄 Descargar Informe (.txt)",
+                data=reporte_texto,
+                file_name=f"Tropa_Perimetros_{nombre_alumno}_{fecha_hoy}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+        with col_btn2:
+            whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote(reporte_texto)}"
+            st.markdown(f"""
+                <a href="{whatsapp_url}" target="_blank">
+                    <button style="width: 100%; background: linear-gradient(135deg, #22c55e 0%, #15803d 100%); color: white; border: none; border-radius: 12px; padding: 0.6rem 1.5rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);">
+                        💬 Compartir por WhatsApp
+                    </button>
+                </a>
+            """, unsafe_allow_html=True)
 
 with pestana_historial:
     st.markdown("### 📈 Base de Datos y Progreso de la Tropa")

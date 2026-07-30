@@ -2,9 +2,10 @@ import streamlit as st
 import pandas as pd
 import datetime
 import os
+import base64
 
 # --- CONFIGURACIÓN Y ESTÉTICA VISUAL ---
-st.set_page_config(page_title="Tropa | Antropometría y Rendimiento", layout="wide", page_icon="⚡")
+st.set_page_config(page_title="Tropa | Antropometría por Perímetros", layout="wide", page_icon="⚡")
 
 st.markdown("""
     <style>
@@ -36,43 +37,35 @@ st.markdown("""
         color: #f8fafc;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-    .card-medida {
+    .card-info {
         background-color: #1e293b;
-        padding: 14px;
-        border-radius: 12px;
-        border: 1px solid #334155;
-        margin-bottom: 12px;
-    }
-    .card-medida h4 {
-        color: #38bdf8;
-        margin-bottom: 4px;
-        font-size: 1rem;
-    }
-    .card-medida p {
-        color: #94a3b8;
+        padding: 12px;
+        border-radius: 10px;
+        border-left: 4px solid #38bdf8;
         font-size: 0.85rem;
-        margin: 0;
+        color: #94a3b8;
+        margin-bottom: 15px;
     }
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align: center; color: #38bdf8;'>⚡ TROPA PERFORMANCE LAB</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #94a3b8; font-size: 1.1rem;'>Sistema inteligente de antropometría, composición corporal y nutrición deportiva.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #94a3b8; font-size: 1.1rem;'>Evaluación Antropométrica por Perímetros (Balanza & Cinta Métrica)</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-ARCHIVO_HISTORIAL = "historial_antropometria_tropa.csv"
+ARCHIVO_HISTORIAL = "historial_perimetros_tropa.csv"
 
 def cargar_historial():
     if os.path.exists(ARCHIVO_HISTORIAL):
         return pd.read_csv(ARCHIVO_HISTORIAL)
     return pd.DataFrame(columns=[
         "Fecha", "Alumno", "Edad", "Peso", "Altura", "Genero", "Disciplina", "Objetivo", 
-        "Suma_Pliegues", "Porcentaje_Grasa", "Masa_Muscular", "Masa_Grasa", "Masa_Osea"
+        "Porcentaje_Grasa", "Masa_Muscular", "Masa_Grasa"
     ])
 
 df_historial = cargar_historial()
 
-pestana_nueva, pestana_historial = st.tabs(["📝 Nueva Medición & Guía", "📈 Historial de la Tropa"])
+pestana_nueva, pestana_historial = st.tabs(["📝 Registro de Perímetros", "📈 Historial y Evolución"])
 
 with pestana_nueva:
     st.markdown("### 👤 1. Perfil del Atleta")
@@ -95,7 +88,7 @@ with pestana_nueva:
     col1, col2, col3 = st.columns(3)
     with col1:
         edad = st.number_input("Edad (años)", min_value=15, max_value=100, value=28)
-        peso = st.number_input("Peso actual (kg)", min_value=30.0, max_value=200.0, value=70.0)
+        peso = st.number_input("Peso actual (Balanza - kg)", min_value=30.0, max_value=200.0, value=70.0)
     with col2:
         altura = st.number_input("Altura (cm)", min_value=100.0, max_value=220.0, value=175.0)
         genero = st.selectbox("Género", ["Masculino", "Femenino"])
@@ -103,104 +96,75 @@ with pestana_nueva:
         nivel_actividad = st.selectbox("Nivel de Actividad Diaria", ["Alto (Entrena todos los días)", "Moderado (3-4 veces por semana)", "Liviano"])
         
         if "Gimnasio" in disciplina:
-            tipo_dia = st.selectbox("Enfoque de la sesión", [
-                "Día de Fuerza / Hipertrofia Pesada", 
-                "Día de Descanso / Recuperación"
-            ])
+            tipo_dia = st.selectbox("Enfoque de la sesión", ["Día de Fuerza / Hipertrofia Pesada", "Día de Descanso / Recuperación"])
         else:
-            tipo_dia = st.selectbox("Enfoque de la sesión", [
-                "Fondo Largo (Resistencia extendida)", 
-                "Intensidad / Umbrales (Series)", 
-                "Recuperación / Suave", 
-                "Descanso Total"
-            ])
+            tipo_dia = st.selectbox("Enfoque de la sesión", ["Fondo Largo (Resistencia)", "Intensidad / Series", "Recuperación", "Descanso Total"])
 
-    # --- GUÍA VISUAL ESTÉTICA PARA CELULAR ---
-    st.markdown("### 🗺️ Guía Anatómica de Referencia (Protocolo ISAK)")
-    st.markdown("Consulta esta guía rápida de ubicación antes de ingresar los valores:")
+    st.markdown("### 📏 2. Toma de Perímetros (Protocolo Oficial)")
+    st.markdown("<div class='card-info'>💡 Registra los perímetros en centímetros (cm) utilizando una cinta métrica flexible e inextensible. Despliega la guía visual abajo para ver exactamente la referencia de cada letra (A hasta L).</div>", unsafe_allow_html=True)
 
-    with st.expander("👉 Desplegar Guía Visual de Pliegues y Perímetros", expanded=False):
-        gc1, gc2 = st.columns(2)
-        with gc1:
-            st.markdown("""
-            <div class="card-medida">
-                <h4>💪 Pliegue Tricipital</h4>
-                <p>Parte posterior del brazo, punto medio entre el hombro y el codo.</p>
-            </div>
-            <div class="card-medida">
-                <h4>🦴 Pliegue Subescapular</h4>
-                <p>Justo por debajo de la esquina inferior del omóplato (escápula).</p>
-            </div>
-            <div class="card-medida">
-                <h4>🎯 Pliegue Bicipital</h4>
-                <p>Cara anterior del brazo, sobre el vientre muscular del bíceps.</p>
-            </div>
-            <div class="card-medida">
-                <h4>📍 Cresta Ilíaca y Supraespinal</h4>
-                <p>Zona lateral de la cadera, siguiendo la línea natural de la cintura alta.</p>
-            </div>
-            """, unsafe_allow_html=True)
-        with gc2:
-            st.markdown("""
-            <div class="card-medida">
-                <h4>⭕ Pliegue Abdominal</h4>
-                <p>A unos 2-3 cm al lado derecho del ombligo, pliegue horizontal.</p>
-            </div>
-            <div class="card-medida">
-                <h4>🦵 Pliegue Muslo Anterior</h4>
-                <p>En la línea media frontal del muslo, con la pierna relajada.</p>
-            </div>
-            <div class="card-medida">
-                <h4>⚡ Pliegue Pantorrilla</h4>
-                <p>En la zona de mayor perímetro de la pantorrilla (pierna apoyada).</p>
-            </div>
-            <div class="card-medida">
-                <h4>📏 Perímetro de Brazo</h4>
-                <p>Medido relajado y contraído (fuerza máxima) para evaluar tono/hipertrofia.</p>
-            </div>
-            """, unsafe_allow_html=True)
+    # --- GUÍA VISUAL CON LA IMAGEN INCORPORADA ---
+    with st.expander("🗺️ Ver Imagen Oficial de Referencia (A-L)", expanded=False):
+        try:
+            with open("input_file_4.png", "rb") as image_file:
+                encoded_img = base64.b64encode(image_file.read()).decode('utf-8')
+            st.markdown(f'<img src="data:image/png;base64,{encoded_img}" style="width:100%; border-radius:12px; border: 1px solid #334155;" />', unsafe_allow_html=True)
+        except Exception:
+            st.info("Guía visual de referencia (A a L)")
+        
+        st.markdown("""
+        * **A:** P. Hombros | **B:** P. Pecho | **C1:** P. Bíceps relajado | **C2:** P. Bíceps contraído
+        * **D:** P. Antebrazo | **E:** P. Muñeca | **F:** P. Abdomen | **G:** P. Cintura
+        * **H:** P. Caderas | **I:** P. Muslo | **J:** P. Rodilla | **K:** P. Gemelos | **L:** P. Tobillo
+        """)
 
-    st.markdown("### 📐 2. Pliegues Cutáneos (Protocolo ISAK - mm)")
-    col_pl1, col_pl2, col_pl3, col_pl4 = st.columns(4)
-    with col_pl1:
-        pliegue_tricipital = st.number_input("Tricipital (mm)", value=10.0)
-        pliegue_subescapular = st.number_input("Subescapular (mm)", value=12.0)
-    with col_pl2:
-        pliegue_bicipital = st.number_input("Bicipital (mm)", value=5.0)
-        pliegue_cresta_iliaca = st.number_input("Cresta Ilíaca (mm)", value=14.0)
-    with col_pl3:
-        pliegue_supraespinal = st.number_input("Supraespinal (mm)", value=9.0)
-        pliegue_abdominal = st.number_input("Abdominal (mm)", value=18.0)
-    with col_pl4:
-        pliegue_muslo = st.number_input("Muslo anterior (mm)", value=15.0)
-        pliegue_pantorrilla = st.number_input("Pantorrilla (mm)", value=10.0)
+    # Organizado según el estándar UGR
+    st.markdown("#### **Tren Superior (Tronco y Brazos)**")
+    c_ts1, c_ts2, c_ts3, c_ts4 = st.columns(4)
+    with c_ts1:
+        p_hombros = st.number_input("A - P. Hombros (cm)", value=110.0)
+        p_biceps_rel = st.number_input("C1 - P. Bíceps relajado (cm)", value=30.0)
+    with c_ts2:
+        p_pecho = st.number_input("B - P. Pecho (cm)", value=98.0)
+        p_biceps_con = st.number_input("C2 - P. Bíceps contraído (cm)", value=34.0)
+    with c_ts3:
+        p_antebrazo = st.number_input("D - P. Antebrazo (cm)", value=26.0)
+    with c_ts4:
+        p_munecca = st.number_input("E - P. Muñeca (cm)", value=16.5)
 
-    st.markdown("### 📏 3. Perímetros Corporales (cm)")
-    col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-    with col_p1:
-        brazo_relajado = st.number_input("Brazo extendido (cm)", value=30.0)
-    with col_p2:
-        brazo_contraido = st.number_input("Brazo contraído (cm)", value=34.0)
-    with col_p3:
-        cintura = st.number_input("Cintura (cm)", value=80.0)
-    with col_p4:
-        pantorrilla_perimetro = st.number_input("Pantorrilla máx. (cm)", value=35.0)
+    st.markdown("#### **Tronco y Cintura**")
+    c_tr1, c_tr2, c_tr3 = st.columns(3)
+    with c_tr1:
+        p_abdomen = st.number_input("F - P. Abdomen (cm)", value=82.0)
+    with c_tr2:
+        p_cintura = st.number_input("G - P. Cintura (cm)", value=79.0)
+    with c_tr3:
+        p_caderas = st.number_input("H - P. Caderas (cm)", value=96.0)
+
+    st.markdown("#### **Tren Inferior (Piernas)**")
+    c_ti1, c_ti2, c_ti3, c_ti4 = st.columns(4)
+    with c_ti1:
+        p_muslo = st.number_input("I - P. Muslo (cm)", value=54.0)
+    with c_ti2:
+        p_rodilla = st.number_input("J - P. Rodilla (cm)", value=37.0)
+    with c_ti3:
+        p_gemelos = st.number_input("K - P. Gemelos (cm)", value=36.0)
+    with c_ti4:
+        p_tobillo = st.number_input("L - P. Tobillo (cm)", value=22.0)
 
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🚀 Calcular Métricas y Plan de la Tropa", use_container_width=True):
-        suma_pliegues = (pliegue_tricipital + pliegue_subescapular + pliegue_cresta_iliaca + 
-                         pliegue_supraespinal + pliegue_muslo + pliegue_pantorrilla)
         
         if genero == "Masculino":
-            porcentaje_grasa = max(5.0, min(40.0, (0.29288 * suma_pliegues) - (0.0005 * (suma_pliegues**2)) + (0.158 * edad) - 5.76))
+            porcentaje_grasa = max(5.0, min(40.0, (1.20 * (peso / ((altura/100)**2))) + (0.23 * edad) - (10.8 * (p_cintura/altura)) - 5.4))
         else:
-            porcentaje_grasa = max(8.0, min(45.0, (0.29669 * suma_pliegues) - (0.00043 * (suma_pliegues**2)) + (0.02963 * edad) + 1.40))
+            porcentaje_grasa = max(8.0, min(45.0, (1.20 * (peso / ((altura/100)**2))) + (0.23 * edad) + (0.15 * p_caderas) - (9.5 * (p_cintura/altura)) - 7.2))
 
         masa_grasa_kg = peso * (porcentaje_grasa / 100)
         masa_magra_kg = peso - masa_grasa_kg
-        masa_osea_kg = peso * 0.14  
-        masa_residual_kg = peso * 0.22 if genero == "Masculino" else peso * 0.24 
-        masa_muscular_kg = masa_magra_kg - masa_osea_kg - masa_residual_kg
+        
+        indice_tono_brazo = p_biceps_con - p_biceps_rel
+        masa_muscular_kg = masa_magra_kg * 0.72
 
         fecha_hoy = datetime.date.today().strftime("%Y-%m-%d")
         nueva_fila = {
@@ -208,11 +172,9 @@ with pestana_nueva:
             "Alumno": nombre_alumno,
             "Edad": edad, "Peso": peso, "Altura": altura, "Genero": genero, 
             "Disciplina": disciplina, "Objetivo": objetivo,
-            "Suma_Pliegues": round(suma_pliegues, 1),
             "Porcentaje_Grasa": round(porcentaje_grasa, 1),
             "Masa_Muscular": round(masa_muscular_kg, 1),
-            "Masa_Grasa": round(masa_grasa_kg, 1),
-            "Masa_Osea": round(masa_osea_kg, 1)
+            "Masa_Grasa": round(masa_grasa_kg, 1)
         }
         
         df_historial = pd.concat([df_historial, pd.DataFrame([nueva_fila])], ignore_index=True)
@@ -246,9 +208,9 @@ with pestana_nueva:
         st.markdown(f"### 📊 Resultados de Composición: {nombre_alumno}")
         res_col1, res_col2, res_col3, res_col4 = st.columns(4)
         res_col1.metric("Porcentaje de Grasa", f"{porcentaje_grasa:.1f}%", f"{masa_grasa_kg:.1f} kg")
-        res_col2.metric("Masa Muscular", f"{masa_muscular_kg:.1f} kg")
-        res_col3.metric("Masa Ósea", f"{masa_osea_kg:.1f} kg")
-        res_col4.metric("Diferencia Brazo", f"+{brazo_contraido - brazo_relajado:.1f} cm")
+        res_col2.metric("Masa Muscular Est.", f"{masa_muscular_kg:.1f} kg")
+        res_col3.metric("Masa Adiposa", f"{masa_grasa_kg:.1f} kg")
+        res_col4.metric("Tono Bíceps (C2-C1)", f"+{indice_tono_brazo:.1f} cm")
 
         st.markdown("---")
         st.markdown("### 🥗 Plan Nutricional y Objetivos de Energía")
@@ -264,19 +226,32 @@ with pestana_nueva:
         st.markdown("---")
         reporte_texto = f"""
 ==================================================
-TROPA PERFORMANCE LAB - INFORME NUTRICIONAL
+TROPA PERFORMANCE LAB - INFORME ANTROPOMÉTRICO
 Atleta: {nombre_alumno}
 Fecha: {fecha_hoy}
 ==================================================
 - Disciplina: {disciplina}
 - Objetivo: {objetivo}
-- Peso: {peso} kg | Altura: {altura} cm | Edad: {edad} años
+- Peso (Balanza): {peso} kg | Altura: {altura} cm | Edad: {edad} años
 
-[COMPOSICIÓN CORPORAL]
+[PERÍMETROS REGISTRADOS (Protocolo Oficial)]
+- A. Hombros: {p_hombros} cm
+- B. Pecho: {p_pecho} cm
+- C1. Bíceps relajado: {p_biceps_rel} cm
+- C2. Bíceps contraído: {p_biceps_con} cm (Diferencia: +{indice_tono_brazo:.1f} cm)
+- D. Antebrazo: {p_antebrazo} cm
+- E. Muñeca: {p_munecca} cm
+- F. Abdomen: {p_abdomen} cm
+- G. Cintura: {p_cintura} cm
+- H. Caderas: {p_caderas} cm
+- I. Muslo: {p_muslo} cm
+- J. Rodilla: {p_rodilla} cm
+- K. Gemelos: {p_gemelos} cm
+- L. Tobillo: {p_tobillo} cm
+
+[COMPOSICIÓN CORPORAL ESTIMADA]
 - Porcentaje de grasa: {porcentaje_grasa:.1f}% ({masa_grasa_kg:.1f} kg)
-- Masa muscular: {masa_muscular_kg:.1f} kg
-- Masa ósea: {masa_osea_kg:.1f} kg
-- Tono / Diferencia de brazo: +{brazo_contraido - brazo_relajado:.1f} cm
+- Masa muscular estimada: {masa_muscular_kg:.1f} kg
 
 [PLAN NUTRICIONAL]
 - Calorías Objetivo: {calorias_objetivo:.0f} kcal
@@ -286,9 +261,9 @@ Fecha: {fecha_hoy}
 ==================================================
 """
         st.download_button(
-            label="📄 Descargar Informe Estilizado (.txt)",
+            label="📄 Descargar Informe Completo de Perímetros (.txt)",
             data=reporte_texto,
-            file_name=f"Tropa_{nombre_alumno}_{fecha_hoy}.txt",
+            file_name=f"Tropa_Perimetros_{nombre_alumno}_{fecha_hoy}.txt",
             mime="text/plain",
             use_container_width=True
         )

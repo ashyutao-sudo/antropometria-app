@@ -53,14 +53,19 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Logo y Encabezado
+# Logo centrado arriba (limpio, sin bordes cuadrados forzados)
+logo_path = None
 if os.path.exists("logo.png"):
-    st.image("logo.png", width=130)
+    logo_path = "logo.png"
 elif os.path.exists("input_file_1.png"):
-    st.image("input_file_1.png", width=130)
+    logo_path = "input_file_1.png"
 
-st.markdown("<h2 style='text-align: center; color: #a3e635; font-weight: 800; letter-spacing: 1px;'>TROPAFIT</h2>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #d4d4d8; font-size: 1.1rem;'>Evaluación Antropométrica por Perímetros, Balanza y Cinta Métrica</p>", unsafe_allow_html=True)
+if logo_path:
+    col_l1, col_l2, col_l3 = st.columns([1, 1.2, 1])
+    with col_l2:
+        st.image(logo_path, width=160)
+
+st.markdown("<p style='text-align: center; color: #d4d4d8; font-size: 1.1rem; margin-top: 10px;'>Evaluación Antropométrica por Perímetros, Balanza y Cinta Métrica</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 ARCHIVO_HISTORIAL = "historial_perimetros_tropa.csv"

@@ -56,7 +56,7 @@ def init_db():
             porcentaje_grasa REAL,
             masa_muscular REAL,
             masa_grasa REAL,
-            FOREIGN KEY (username) REFERENCES usuarios(username)
+            FOREIGN KEY (username) REFERENCES usuarios(username) ON DELETE CASCADE
         )
     ''')
     conn.commit()
@@ -387,7 +387,7 @@ else:
 
     elif st.session_state['rol'] == "Entrenador":
         st.markdown("### 🏆 Panel de Control del Entrenador - Tropa")
-        st.write("Visualiza el informe clínico y comparativo de tus atletas.")
+        st.write("Visualiza el informe clínico, la evolución y administra los perfiles de tus atletas.")
         
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
@@ -403,7 +403,6 @@ else:
                 meta_atleta = 70.0
             
             df_atleta = pd.read_sql_query("SELECT * FROM mediciones WHERE username = ? ORDER BY fecha ASC", conn, params=(atleta_seleccionado,))
-            conn.close()
             
             if not df_atleta.empty:
                 inicio = df_atleta.iloc[0]
@@ -423,6 +422,20 @@ else:
                     st.line_chart(df_atleta.set_index("fecha")[["peso", "porcentaje_grasa", "masa_muscular"]])
             else:
                 st.info(f"El atleta {atleta_seleccionado} aún no ha registrado mediciones.")
+            
+            st.markdown("---")
+            st.markdown("#### ⚙️ Administración de Atletas")
+            st.warning(f"Zona de peligro: Si eliminas al atleta **{atleta_seleccionado}**, se borrarán permanentemente su cuenta y todos sus registros históricos.")
+            
+            if st.button(f"🗑️ Eliminar Atleta: {atleta_seleccionado}", type="primary"):
+                cursor.execute("DELETE FROM mediciones WHERE username = ?", (atleta_seleccionado,))
+                cursor.execute("DELETE FROM usuarios WHERE username = ?", (atleta_seleccionado,))
+                conn.commit()
+                conn.close()
+                st.success(f"¡El atleta {atleta_seleccionado} y sus registros fueron eliminados correctamente!")
+                st.rerun()
+            else:
+                conn.close()
         else:
             conn.close()
             st.warning("Todavía no hay atletas registrados.")

@@ -16,14 +16,15 @@ DB_FILE = "tropafit_database.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    # Tabla de Usuarios (Atletas y Entrenadores)
+    # Tabla de Usuarios con meta de peso/grasa
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
             username TEXT PRIMARY KEY,
             password TEXT NOT NULL,
             rol TEXT NOT NULL,
             disciplina TEXT,
-            objetivo TEXT
+            objetivo TEXT,
+            meta_peso REAL DEFAULT 70.0
         )
     ''')
     # Tabla de Mediciones Antropométricas por Usuario
@@ -132,7 +133,7 @@ if logo_path:
         </div>
     """, unsafe_allow_html=True)
 
-st.markdown("<p style='text-align: center; color: #d4d4d8; font-size: 1.1rem; margin-top: 5px;'>Evaluación Antropométrica por Perímetros, Balanza y Cinta Métrica</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #d4d4d8; font-size: 1.1rem; margin-top: 5px;'>Evaluación Antropométrica y Evolución hacia la Meta</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # --- CONTROL DE SESIÓN Y LOGIN ---
@@ -172,6 +173,7 @@ def login_view():
             new_user = st.text_input("Elige un Nombre de Usuario")
             new_pass = st.text_input("Elige una Contraseña", type="password")
             new_rol = st.selectbox("Tipo de Cuenta", ["Atleta", "Entrenador"])
+            new_meta = st.number_input("Peso Objetivo / Meta (kg)", value=68.0)
             new_disc = st.selectbox("Disciplina Principal", ["🏋️‍♂️ Gimnasio (Fuerza / Hipertrofia)", "🏊‍♂️🚴‍♂️🏃‍♂️ Triatlón / Resistencia"])
             new_obj = st.selectbox("Objetivo Principal", ["Pérdida de grasa / Definición", "Hipertrofia / Ganancia Muscular", "Rendimiento deportivo", "Mantenimiento"])
             btn_reg = st.form_submit_button("Crear Cuenta")
@@ -181,8 +183,8 @@ def login_view():
                     conn = sqlite3.connect(DB_FILE)
                     cursor = conn.cursor()
                     try:
-                        cursor.execute("INSERT INTO usuarios (username, password, rol, disciplina, objetivo) VALUES (?, ?, ?, ?, ?)",
-                                       (new_user, hash_password(new_pass), new_rol, new_disc, new_obj))
+                        cursor.execute("INSERT INTO usuarios (username, password, rol, disciplina, objetivo, meta_peso) VALUES (?, ?, ?, ?, ?, ?)",
+                                       (new_user, hash_password(new_pass), new_rol, new_disc, new_obj, new_meta))
                         conn.commit()
                         st.success("¡Cuenta creada con éxito! Ve a la pestaña 'Iniciar Sesión'.")
                     except sqlite3.IntegrityError:
@@ -194,7 +196,6 @@ def login_view():
 if not st.session_state['logged_in']:
     login_view()
 else:
-    # Botón de Cerrar Sesión en barra lateral
     with st.sidebar:
         st.write(f"👤 Conectado como: **{st.session_state['username']}**")
         st.write(f"🏷️ Rol: **{st.session_state['rol']}**")
@@ -204,15 +205,21 @@ else:
             st.session_state['rol'] = ''
             st.rerun()
             
-    # --- VISTA SEGÚN ROL ---
     if st.session_state['rol'] == "Atleta":
-        # Interfaz del Atleta con su Carga y su Historial Evolutivo personal
         atleta_actual = st.session_state['username']
         
-        tab_medicion, tab_evolucion = st.tabs(["📝 Nueva Medición & Plan", "📈 Mi Evolución Personal"])
+        # Buscar meta de peso del usuario
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT meta_peso FROM usuarios WHERE username = ?", (atleta_actual,))
+        meta_res = cursor.fetchone()
+        meta_peso = meta_res[0] if meta_res else 70.0
+        conn.close()
+        
+        tab_medicion, tab_evolucion = st.tabs(["📝 Nueva Medición & Plan", "📈 Mi Evolución y Meta"])
         
         with tab_medicion:
-            st.markdown(f"### 👤 Panel de Control de Atleta: {atleta_actual}")
+            st.markdown(f"### 👤 Carga de Perímetros: {atleta_actual}")
             
             col_n1, col_n2 = st.columns(2)
             with col_n1:
@@ -282,7 +289,6 @@ else:
                 masa_muscular_kg = masa_magra_kg * 0.72
                 fecha_hoy = datetime.date.today().strftime("%Y-%m-%d")
 
-                # Guardar en base de datos SQLite personal
                 conn = sqlite3.connect(DB_FILE)
                 cursor = conn.cursor()
                 cursor.execute('''
@@ -298,9 +304,8 @@ else:
                       round(porcentaje_grasa, 1), round(masa_muscular_kg, 1), round(masa_grasa_kg, 1)))
                 conn.commit()
                 conn.close()
-                st.success("¡Medición guardada en tu historial personal con éxito!")
+                st.success("¡Medición guardada con éxito!")
 
-                # Resultados
                 st.markdown("---")
                 st.markdown(f"### 📊 Resultados de Composición: {atleta_actual}")
                 res_col1, res_col2, res_col3 = st.columns(3)
@@ -308,11 +313,10 @@ else:
                 res_col2.metric("Masa Muscular Est.", f"{masa_muscular_kg:.1f} kg")
                 res_col3.metric("Masa Adiposa", f"{masa_grasa_kg:.1f} kg")
 
-                # WhatsApp Share
                 reporte_texto = f"""*⚡ TROPAFIT - INFORME ANTROPOMÉTRICO*
 *Atleta:* {atleta_actual}
 *Fecha:* {fecha_hoy}
-*Peso:* {peso} kg | *Grasa:* {porcentaje_grasa:.1f}% | *Muscular:* {masa_muscular_kg:.1f} kg
+*Peso actual:* {peso} kg (Meta: {meta_peso} kg) | *Grasa:* {porcentaje_grasa:.1f}% | *Muscular:* {masa_muscular_kg:.1f} kg
 """
                 whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote(reporte_texto)}"
                 st.markdown(f"""
@@ -324,43 +328,68 @@ else:
                 """, unsafe_allow_html=True)
 
         with tab_evolucion:
-            st.markdown(f"### 📈 Historial Evolutivo de: {atleta_actual}")
+            st.markdown(f"### 📈 Tu Línea de Evolución vs. Inicio y Meta")
+            
             conn = sqlite3.connect(DB_FILE)
-            df_user = pd.read_sql_query("SELECT fecha, peso, porcentaje_grasa, masa_muscular, p_cintura FROM mediciones WHERE username = ?", conn, params=(atleta_actual,))
+            df_user = pd.read_sql_query("SELECT fecha, peso, porcentaje_grasa, masa_muscular, p_cintura FROM mediciones WHERE username = ? ORDER BY fecha ASC", conn, params=(atleta_actual,))
             conn.close()
             
             if not df_user.empty:
+                # Obtener el primer registro (Inicio) y el último (Actual)
+                inicio = df_user.iloc[0]
+                actual = df_user.iloc[-1]
+                
+                col_m1, col_m2, col_m3 = st.columns(3)
+                col_m1.metric("🏁 Peso Inicial", f"{inicio['peso']} kg", f"Fecha: {inicio['fecha']}")
+                col_m2.metric("📍 Peso Actual", f"{actual['peso']} kg", f"{round(actual['peso'] - inicio['peso'], 1)} kg vs inicio")
+                col_m3.metric("🎯 Peso Meta", f"{meta_peso} kg", f"Faltan: {round(actual['peso'] - meta_peso, 1)} kg")
+                
+                st.markdown("---")
+                st.subheader("📋 Tabla Histórica de Registros")
                 st.dataframe(df_user, use_container_width=True)
-                st.subheader("Evolución de Peso y Grasa")
+                
+                st.subheader("📉 Gráfica de Tu Progreso")
                 st.line_chart(df_user.set_index("fecha")[["peso", "porcentaje_grasa", "masa_muscular"]])
             else:
-                st.info("Aún no tienes mediciones guardadas. Ve a la pestaña anterior para registrar tu primera evaluación.")
+                st.info("Aún no tienes registros guardados. Carga tu primera medición para activar tu línea de evolución.")
 
     elif st.session_state['rol'] == "Entrenador":
-        # Panel del Entrenador (Ve a todos los atletas y sus registros)
         st.markdown("### 🏆 Panel de Control del Entrenador - Tropa")
-        st.write("Aquí puedes visualizar las mediciones y la evolución histórica de todos los atletas registrados en el sistema.")
+        st.write("Visualiza el progreso de tus atletas contrastando su **primer registro (inicio)**, su **estado actual** y su **meta**.")
         
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT username FROM usuarios WHERE rol = 'Atleta'")
-        atletas = [row[0] for row in cursor.fetchall()]
+        cursor.execute("SELECT username, meta_peso FROM usuarios WHERE rol = 'Atleta'")
+        atletas_info = cursor.fetchall()
         
-        if atletas:
-            atleta_seleccionado = st.selectbox("Selecciona un Atleta de la Tropa para ver su progreso:", atletas)
+        if atletas_info:
+            nombres_atletas = [a[0] for a in atletas_info]
+            atleta_seleccionado = st.selectbox("Selecciona un Atleta de la Tropa:", nombres_atletas)
             
-            df_atleta = pd.read_sql_query("SELECT * FROM mediciones WHERE username = ?", conn, params=(atleta_seleccionado,))
+            # Buscar meta del atleta seleccionado
+            meta_atleta = [a[1] for a in atletas_info if a[0] == atleta_seleccionado][0]
+            
+            df_atleta = pd.read_sql_query("SELECT * FROM mediciones WHERE username = ? ORDER BY fecha ASC", conn, params=(atleta_seleccionado,))
             conn.close()
             
             if not df_atleta.empty:
-                st.markdown(f"#### Historial de Registros: {atleta_seleccionado}")
+                inicio = df_atleta.iloc[0]
+                actual = df_atleta.iloc[-1]
+                
+                col_e1, col_e2, col_e3 = st.columns(3)
+                col_e1.metric("🏁 Inicio (1er Registro)", f"{inicio['peso']} kg", f"Grasa: {inicio['porcentaje_grasa']}%")
+                col_e2.metric("📊 Último Registro", f"{actual['peso']} kg", f"Grasa: {actual['porcentaje_grasa']}%")
+                col_e3.metric("🎯 Meta Establecida", f"{meta_atleta} kg")
+                
+                st.markdown("---")
+                st.markdown(f"#### Historial completo de: {atleta_seleccionado}")
                 st.dataframe(df_atleta, use_container_width=True)
                 
                 if len(df_atleta) > 1:
-                    st.subheader("Gráfica de Progreso del Atleta")
+                    st.subheader("📈 Línea de Evolución del Atleta")
                     st.line_chart(df_atleta.set_index("fecha")[["peso", "porcentaje_grasa", "masa_muscular"]])
             else:
-                st.info(f"El atleta {atleta_seleccionado} todavía no ha cargado ninguna medición.")
+                st.info(f"El atleta {atleta_seleccionado} aún no ha registrado mediciones.")
         else:
             conn.close()
-            st.warning("Todavía no hay atletas registrados en la base de datos.")
+            st.warning("Todavía no hay atletas registrados.")

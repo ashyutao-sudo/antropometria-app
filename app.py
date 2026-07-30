@@ -7,7 +7,7 @@ import urllib.parse
 # --- CONFIGURACIÓN Y ESTÉTICA VISUAL ---
 st.set_page_config(page_title="TROPAFIT | Antropometría por Perímetros", layout="wide", page_icon="⚡")
 
-# Color de fondo idéntico al de la imagen del logo (#222222)
+# Color de fondo idéntico al de la imagen del logo (#222222) y CSS para nitidez de imagen
 st.markdown("""
     <style>
     .main {
@@ -16,6 +16,20 @@ st.markdown("""
     }
     .stApp {
         background-color: #222222;
+    }
+    .logo-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-top: 10px;
+        margin-bottom: 5px;
+    }
+    .logo-img {
+        max-width: 180px;
+        height: auto;
+        image-rendering: -webkit-optimize-contrast; /* Máxima nitidez en navegadores */
+        image-rendering: crisp-edges;
     }
     .stButton>button {
         background: linear-gradient(135deg, #a3e635 0%, #65a30d 100%);
@@ -53,7 +67,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Logo centrado arriba (limpio, sin bordes cuadrados forzados)
+# Logo centrado arriba de manera absoluta mediante HTML/CSS Flexbox para máxima nitidez
+import base64
 logo_path = None
 if os.path.exists("logo.png"):
     logo_path = "logo.png"
@@ -61,11 +76,15 @@ elif os.path.exists("input_file_1.png"):
     logo_path = "input_file_1.png"
 
 if logo_path:
-    col_l1, col_l2, col_l3 = st.columns([1, 1.2, 1])
-    with col_l2:
-        st.image(logo_path, width=160)
+    with open(logo_path, "rb") as f:
+        encoded_logo = base64.b64encode(f.read()).decode('utf-8')
+    st.markdown(f"""
+        <div class="logo-container">
+            <img src="data:image/png;base64,{encoded_logo}" class="logo-img" />
+        </div>
+    """, unsafe_allow_html=True)
 
-st.markdown("<p style='text-align: center; color: #d4d4d8; font-size: 1.1rem; margin-top: 10px;'>Evaluación Antropométrica por Perímetros, Balanza y Cinta Métrica</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #d4d4d8; font-size: 1.1rem; margin-top: 5px;'>Evaluación Antropométrica por Perímetros, Balanza y Cinta Métrica</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 ARCHIVO_HISTORIAL = "historial_perimetros_tropa.csv"

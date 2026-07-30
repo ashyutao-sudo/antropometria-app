@@ -84,8 +84,9 @@ with pestana_nueva:
         masa_muscular_kg = masa_magra_kg - masa_osea_kg - masa_residual_kg
 
         # Guardar en historial
+        fecha_hoy = datetime.date.today().strftime("%Y-%m-%d")
         nueva_fila = {
-            "Fecha": datetime.date.today().strftime("%Y-%m-%d"),
+            "Fecha": fecha_hoy,
             "Edad": edad, "Peso": peso, "Altura": altura, "Genero": genero, "Objetivo": objetivo,
             "Suma_Pliegues": round(suma_pliegues, 1),
             "Porcentaje_Grasa": round(porcentaje_grasa, 1),
@@ -97,13 +98,12 @@ with pestana_nueva:
         df_historial = pd.concat([df_historial, pd.DataFrame([nueva_fila])], ignore_index=True)
         df_historial.to_csv(ARCHIVO_HISTORIAL, index=False)
 
-        # Cálculo TMB (Mifflin-St Jeor)
+        # Cálculo TMB
         if genero == "Masculino":
             tmb = (10 * peso) + (6.25 * altura) - (5 * edad) + 5
         else:
             tmb = (10 * peso) + (6.25 * altura) - (5 * edad) - 161
 
-        # Factor de actividad dinámico según el tipo de día seleccionado
         if "Fondo Largo" in tipo_dia:
             factor_dia = 1.9
         elif "Intensidad" in tipo_dia:
@@ -114,11 +114,11 @@ with pestana_nueva:
             factor_dia = 1.25
 
         gasto_total = tmb * factor_dia
-        
-        if objetivo == "Pérdida de grasa" and "Fondo Largo" not in tipo_dia:
-            calorias_objetivo = gasto_total - 300  # Déficit moderado controlado
-        else:
-            calorias_objetivo = gasto_total  # Normocalórica para rendir o aguantar fondos
+        calorias_objetivo = gasto_total - 300 if objetivo == "Pérdida de grasa" and "Fondo Largo" not in tipo_dia else gasto_total
+
+        prot = masa_magra_kg * 2.0
+        gras = (calorias_objetivo * 0.25) / 9
+        carb = (calorias_objetivo - (prot * 4) - (gras * 9)) / 4
 
         st.markdown("---")
         st.header("📊 Composición Corporal y Resultados")
@@ -135,24 +135,65 @@ with pestana_nueva:
             st.info(f"**Gasto Estimado (Hoy):** {gasto_total:.0f} kcal")
             st.success(f"**Calorías Objetivo:** {calorias_objetivo:.0f} kcal")
             
-            # Hidratación y electrolitos sugeridos por tipo de día
             if "Fondo Largo" in tipo_dia:
-                st.warning("💧 **Hidratación sugerida:** 600-800 ml de agua por hora de entrenamiento + aporte de 40-60g de carbohidratos/hora en gel o bebida isotónica.")
+                hidro_txt = "💧 Hidratación sugerida: 600-800 ml de agua/hora + 40-60g carbohidratos/hora."
             elif "Intensidad" in tipo_dia:
-                st.warning("💧 **Hidratación sugerida:** 500 ml/hora con sales minerales (electrolitos) para evitar calambres en umbrales.")
+                hidro_txt = "💧 Hidratación sugerida: 500 ml/hora con electrolitos y sales minerales."
             else:
-                st.warning("💧 **Hidratación sugerida:** Mantener ingesta base de 35-40 ml por kg de peso corporal durante el día.")
+                hidro_txt = "💧 Hidratación sugerida: Mantener ingesta base de 35-40 ml por kg diario."
+            st.warning(hidro_txt)
 
         with nut_col2:
-            # Distribución de macros orientada a resistencia
-            prot = masa_magra_kg * 2.0
-            gras = (calorias_objetivo * 0.25) / 9
-            carb = (calorias_objetivo - (prot * 4) - (gras * 9)) / 4
-            
             st.write("**Macronutrientes recomendados para hoy:**")
             st.text(f"- Proteínas: {prot:.0f} g ({prot*4:.0f} kcal)")
             st.text(f"- Carbohidratos: {carb:.0f} g ({carb*4:.0f} kcal)")
             st.text(f"- Grasas: {gras:.0f} g ({gras*9:.0f} kcal)")
+
+        # --- GENERADOR DE INFORME DESCARGABLE ---
+        st.markdown("---")
+        st.header("📥 Descargar Reporte Personalizado")
+        
+        reporte_texto = f"""
+==================================================
+INFORME ANTROPOMÉTRICO Y NUTRICIONAL - TRIATLÓN
+Fecha: {fecha_hoy}
+==================================================
+[1] DATOS GENERALES
+- Edad: {edad} años
+- Género: {genero}
+- Altura: {altura} cm
+- Peso actual: {peso} kg
+- Objetivo: {objetivo}
+- Tipo de entrenamiento de hoy: {tipo_dia}
+
+[2] COMPOSICIÓN CORPORAL (ISAK)
+- Suma de 6 pliegues: {suma_pliegues:.1f} mm
+- Porcentaje de grasa: {porcentaje_grasa:.1f}% ({masa_grasa_kg:.1f} kg)
+- Masa muscular estimada: {masa_muscular_kg:.1f} kg
+- Masa ósea estimada: {masa_osea_kg:.1f} kg
+
+[3] PLAN NUTRICIONAL DIARIO
+- Gasto Energético Basal (TMB): {tmb:.0f} kcal
+- Gasto Total Estimado (con actividad): {gasto_total:.0f} kcal
+- Calorías Objetivo: {calorias_objetivo:.0f} kcal
+
+[4] DISTRIBUCIÓN DE MACRONUTRIENTES
+- Proteínas: {prot:.0f} g
+- Carbohidratos: {carb:.0f} g
+- Grasas: {gras:.0f} g
+
+[5] PAUTAS DE HIDRATACIÓN Y RENDIMIENTO
+- {hidro_txt}
+==================================================
+Generado desde tu Sistema Antropométrico Personal en la Nube.
+"""
+
+        st.download_button(
+            label="📄 Descargar Informe Completo (.txt)",
+            data=reporte_texto,
+            file_name=f"Informe_Antropometria_{fecha_hoy}.txt",
+            mime="text/plain"
+        )
 
 with pestana_historial:
     st.header("📈 Historial de Evolución Temporal")

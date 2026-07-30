@@ -4,9 +4,9 @@ import datetime
 import os
 
 # Configuración de la página
-st.set_page_config(page_title="Antropometría y Triatlón - Pro", layout="wide")
+st.set_page_config(page_title="Antropometría y Nutrición - Pro", layout="wide")
 
-st.title("⚡ Sistema Antropométrico y Nutricional para Triatlón")
+st.title("⚡ Sistema Antropométrico, Nutrición y Rendimiento")
 st.markdown("---")
 
 ARCHIVO_HISTORIAL = "historial_antropometria.csv"
@@ -15,7 +15,7 @@ def cargar_historial():
     if os.path.exists(ARCHIVO_HISTORIAL):
         return pd.read_csv(ARCHIVO_HISTORIAL)
     return pd.DataFrame(columns=[
-        "Fecha", "Edad", "Peso", "Altura", "Genero", "Objetivo", 
+        "Fecha", "Alumno", "Edad", "Peso", "Altura", "Genero", "Disciplina", "Objetivo", 
         "Suma_Pliegues", "Porcentaje_Grasa", "Masa_Muscular", "Masa_Grasa", "Masa_Osea"
     ])
 
@@ -24,7 +24,22 @@ df_historial = cargar_historial()
 pestana_nueva, pestana_historial = st.tabs(["📝 Nueva Medición & Plan", "📈 Historial y Evolución"])
 
 with pestana_nueva:
-    st.header("1. Datos Generales y Antropométricos")
+    st.header("1. Datos Generales y del Alumno")
+
+    col_n1, col_n2 = st.columns(2)
+    with col_n1:
+        nombre_alumno = st.text_input("Nombre / Identificación del Alumno", value="Alumno 1")
+        disciplina = st.selectbox("Disciplina Principal", [
+            "🏋️‍♂️ Gimnasio (Fuerza / Hipertrofia / Estética)", 
+            "🏊‍♂️🚴‍♂️🏃‍♂️ Triatlón / Resistencia"
+        ])
+    with col_n2:
+        objetivo = st.selectbox("Objetivo principal", [
+            "Pérdida de grasa / Definición", 
+            "Hipertrofia / Ganancia Muscular", 
+            "Rendimiento deportivo", 
+            "Mantenimiento"
+        ])
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -34,13 +49,20 @@ with pestana_nueva:
         altura = st.number_input("Altura (cm)", min_value=100.0, max_value=220.0, value=175.0)
         genero = st.selectbox("Género", ["Masculino", "Femenino"])
     with col3:
-        objetivo = st.selectbox("Objetivo principal", ["Pérdida de grasa", "Rendimiento en Triatlón", "Mantenimiento"])
-        tipo_dia = st.selectbox("Tipo de entrenamiento de hoy", [
-            "Fondo Largo (Alta demanda / Ciclismo o Running extendido)", 
-            "Intensidad / Umbrales (Series)", 
-            "Recuperación / Suave (Natación corta o técnica)", 
-            "Descanso Total"
-        ])
+        nivel_actividad = st.selectbox("Nivel de Actividad Diaria", ["Alto (Entrena todos los días)", "Moderado (3-4 veces por semana)", "Liviano"])
+        
+        if "Gimnasio" in disciplina:
+            tipo_dia = st.selectbox("Tipo de entrenamiento de hoy", [
+                "Día de Fuerza / Hipertrofia Pesada", 
+                "Día de Descanso / Recuperación"
+            ])
+        else:
+            tipo_dia = st.selectbox("Tipo de entrenamiento de hoy", [
+                "Fondo Largo (Alta demanda resistencia)", 
+                "Intensidad / Umbrales (Series)", 
+                "Recuperación / Suave", 
+                "Descanso Total"
+            ])
 
     st.subheader("2. Pliegues Cutáneos (mm) - Protocolo ISAK")
     col_pl1, col_pl2, col_pl3, col_pl4 = st.columns(4)
@@ -68,7 +90,7 @@ with pestana_nueva:
     with col_p4:
         pantorrilla_perimetro = st.number_input("Pantorrilla máx. (cm)", value=35.0)
 
-    if st.button("Calcular Plan Específico para Triatlón", type="primary"):
+    if st.button("Calcular Plan Nutricional y Corporal", type="primary"):
         suma_pliegues = (pliegue_tricipital + pliegue_subescapular + pliegue_cresta_iliaca + 
                          pliegue_supraespinal + pliegue_muslo + pliegue_pantorrilla)
         
@@ -83,11 +105,12 @@ with pestana_nueva:
         masa_residual_kg = peso * 0.22 if genero == "Masculino" else peso * 0.24 
         masa_muscular_kg = masa_magra_kg - masa_osea_kg - masa_residual_kg
 
-        # Guardar en historial
         fecha_hoy = datetime.date.today().strftime("%Y-%m-%d")
         nueva_fila = {
             "Fecha": fecha_hoy,
-            "Edad": edad, "Peso": peso, "Altura": altura, "Genero": genero, "Objetivo": objetivo,
+            "Alumno": nombre_alumno,
+            "Edad": edad, "Peso": peso, "Altura": altura, "Genero": genero, 
+            "Disciplina": disciplina, "Objetivo": objetivo,
             "Suma_Pliegues": round(suma_pliegues, 1),
             "Porcentaje_Grasa": round(porcentaje_grasa, 1),
             "Masa_Muscular": round(masa_muscular_kg, 1),
@@ -104,103 +127,93 @@ with pestana_nueva:
         else:
             tmb = (10 * peso) + (6.25 * altura) - (5 * edad) - 161
 
-        if "Fondo Largo" in tipo_dia:
-            factor_dia = 1.9
-        elif "Intensidad" in tipo_dia:
-            factor_dia = 1.7
-        elif "Recuperación" in tipo_dia:
-            factor_dia = 1.4
+        # Factor de actividad según disciplina
+        if "Gimnasio" in disciplina:
+            factor_dia = 1.5 if "Alto" in nivel_actividad else 1.35
         else:
-            factor_dia = 1.25
+            factor_dia = 1.9 if "Fondo" in tipo_dia else 1.6
 
         gasto_total = tmb * factor_dia
-        calorias_objetivo = gasto_total - 300 if objetivo == "Pérdida de grasa" and "Fondo Largo" not in tipo_dia else gasto_total
+        
+        # Ajuste de calorías según objetivo
+        if "Pérdida de grasa" in objetivo:
+            calorias_objetivo = gasto_total - 400
+        elif "Hipertrofia" in objetivo:
+            calorias_objetivo = gasto_total + 300  # Superávit para ganar músculo
+        else:
+            calorias_objetivo = gasto_total
 
-        prot = masa_magra_kg * 2.0
-        gras = (calorias_objetivo * 0.25) / 9
-        carb = (calorias_objetivo - (prot * 4) - (gras * 9)) / 4
+        # Macronutrientes ajustados según la disciplina
+        if "Gimnasio" in disciplina:
+            prot = masa_magra_kg * 2.2  # Mayor proteína para síntesis de tejido muscular en gym
+            gras = (calorias_objetivo * 0.25) / 9
+            carb = (calorias_objetivo - (prot * 4) - (gras * 9)) / 4
+        else:
+            prot = masa_magra_kg * 1.8
+            gras = (calorias_objetivo * 0.25) / 9
+            carb = (calorias_objetivo - (prot * 4) - (gras * 9)) / 4
 
         st.markdown("---")
-        st.header("📊 Composición Corporal y Resultados")
+        st.header(f"📊 Resultados para: {nombre_alumno}")
         res_col1, res_col2, res_col3, res_col4 = st.columns(4)
         res_col1.metric("Porcentaje de Grasa", f"{porcentaje_grasa:.1f}%", f"{masa_grasa_kg:.1f} kg")
         res_col2.metric("Masa Muscular", f"{masa_muscular_kg:.1f} kg")
         res_col3.metric("Masa Ósea", f"{masa_osea_kg:.1f} kg")
-        res_col4.metric("Suma de Pliegues", f"{suma_pliegues:.1f} mm")
+        res_col4.metric("Diferencia Brazo (Fuerza)", f"+{brazo_contraido - brazo_relajado:.1f} cm")
 
         st.markdown("---")
-        st.header("🥗 Nutrición Adaptada al Día de Hoy")
+        st.header("🥗 Nutrición y Macronutrientes")
         nut_col1, nut_col2 = st.columns(2)
         with nut_col1:
-            st.info(f"**Gasto Estimado (Hoy):** {gasto_total:.0f} kcal")
-            st.success(f"**Calorías Objetivo:** {calorias_objetivo:.0f} kcal")
+            st.info(f"**Gasto Total (TDEE):** {gasto_total:.0f} kcal")
+            st.success(f"**Calorías Objetivo ({objetivo}):** {calorias_objetivo:.0f} kcal")
             
-            if "Fondo Largo" in tipo_dia:
-                hidro_txt = "💧 Hidratación sugerida: 600-800 ml de agua/hora + 40-60g carbohidratos/hora."
-            elif "Intensidad" in tipo_dia:
-                hidro_txt = "💧 Hidratación sugerida: 500 ml/hora con electrolitos y sales minerales."
+            if "Gimnasio" in disciplina:
+                st.warning("💪 **Enfoque Gimnasio:** Prioriza el descanso de 48-72h por grupo muscular y mantén un consumo constante de agua (35ml/kg) para optimizar el volumen celular e hipertrofia.")
             else:
-                hidro_txt = "💧 Hidratación sugerida: Mantener ingesta base de 35-40 ml por kg diario."
-            st.warning(hidro_txt)
+                st.warning("🚴‍♂️ **Enfoque Triatlón:** Mantén atención en la carga de glucógeno y la hidratación intra-entreno.")
 
         with nut_col2:
-            st.write("**Macronutrientes recomendados para hoy:**")
+            st.write("**Distribución de Macronutrientes:**")
             st.text(f"- Proteínas: {prot:.0f} g ({prot*4:.0f} kcal)")
             st.text(f"- Carbohidratos: {carb:.0f} g ({carb*4:.0f} kcal)")
             st.text(f"- Grasas: {gras:.0f} g ({gras*9:.0f} kcal)")
 
-        # --- GENERADOR DE INFORME DESCARGABLE ---
+        # Reporte descargable
         st.markdown("---")
-        st.header("📥 Descargar Reporte Personalizado")
-        
         reporte_texto = f"""
 ==================================================
-INFORME ANTROPOMÉTRICO Y NUTRICIONAL - TRIATLÓN
+INFORME ANTROPOMÉTRICO Y NUTRICIONAL
+Alumno: {nombre_alumno}
 Fecha: {fecha_hoy}
 ==================================================
-[1] DATOS GENERALES
-- Edad: {edad} años
-- Género: {genero}
-- Altura: {altura} cm
-- Peso actual: {peso} kg
+- Disciplina: {disciplina}
 - Objetivo: {objetivo}
-- Tipo de entrenamiento de hoy: {tipo_dia}
+- Peso: {peso} kg | Altura: {altura} cm | Edad: {edad} años
 
-[2] COMPOSICIÓN CORPORAL (ISAK)
-- Suma de 6 pliegues: {suma_pliegues:.1f} mm
+[COMPOSICIÓN CORPORAL]
 - Porcentaje de grasa: {porcentaje_grasa:.1f}% ({masa_grasa_kg:.1f} kg)
-- Masa muscular estimada: {masa_muscular_kg:.1f} kg
-- Masa ósea estimada: {masa_osea_kg:.1f} kg
+- Masa muscular: {masa_muscular_kg:.1f} kg
+- Masa ósea: {masa_osea_kg:.1f} kg
+- Diferencia de brazo (relajado vs contraído): +{brazo_contraido - brazo_relajado:.1f} cm
 
-[3] PLAN NUTRICIONAL DIARIO
-- Gasto Energético Basal (TMB): {tmb:.0f} kcal
-- Gasto Total Estimado (con actividad): {gasto_total:.0f} kcal
+[PLAN NUTRICIONAL]
 - Calorías Objetivo: {calorias_objetivo:.0f} kcal
-
-[4] DISTRIBUCIÓN DE MACRONUTRIENTES
 - Proteínas: {prot:.0f} g
 - Carbohidratos: {carb:.0f} g
 - Grasas: {gras:.0f} g
-
-[5] PAUTAS DE HIDRATACIÓN Y RENDIMIENTO
-- {hidro_txt}
 ==================================================
-Generado desde tu Sistema Antropométrico Personal en la Nube.
 """
-
         st.download_button(
-            label="📄 Descargar Informe Completo (.txt)",
+            label="📄 Descargar Informe del Alumno (.txt)",
             data=reporte_texto,
-            file_name=f"Informe_Antropometria_{fecha_hoy}.txt",
+            file_name=f"Informe_{nombre_alumno}_{fecha_hoy}.txt",
             mime="text/plain"
         )
 
 with pestana_historial:
-    st.header("📈 Historial de Evolución Temporal")
+    st.header("📈 Historial General de Alumnos")
     if len(df_historial) > 0:
         st.dataframe(df_historial, use_container_width=True)
-        st.subheader("Gráfica de Progreso")
-        df_grafico = df_historial.set_index("Fecha")[["Porcentaje_Grasa", "Masa_Muscular", "Peso"]]
-        st.line_chart(df_grafico)
     else:
-        st.info("No hay registros todavía.")
+        st.info("No hay registros guardados todavía.")

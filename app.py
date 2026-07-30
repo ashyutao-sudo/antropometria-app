@@ -36,14 +36,13 @@ st.markdown("""
         color: #f8fafc;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-    .guia-card {
+    .mapa-box {
         background-color: #1e293b;
-        padding: 12px;
-        border-radius: 10px;
-        border-left: 4px solid #38bdf8;
-        font-size: 0.9rem;
-        margin-bottom: 10px;
-        color: #e2e8f0;
+        padding: 20px;
+        border-radius: 16px;
+        border: 1px solid #334155;
+        text-align: center;
+        margin-bottom: 20px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -64,7 +63,7 @@ def cargar_historial():
 
 df_historial = cargar_historial()
 
-pestana_nueva, pestana_historial = st.tabs(["📝 Nueva Medición & Guía", "📈 Historial de la Tropa"])
+pestana_nueva, pestana_historial = st.tabs(["📝 Nueva Medición & Guía Anatómica", "📈 Historial de la Tropa"])
 
 with pestana_nueva:
     st.markdown("### 👤 1. Perfil del Atleta")
@@ -107,28 +106,62 @@ with pestana_nueva:
                 "Descanso Total"
             ])
 
-    # --- GUÍA VISUAL INTERACTIVA DEL MAPA CORPORAL ---
-    with st.expander("🗺️ Ver Mapa y Guía Visual de Medición (Protocolo ISAK)", expanded=False):
-        st.markdown("""
-        <div style='color: #94a3b8; margin-bottom: 10px;'>
-        Utiliza este mapa anatómico mental para ubicar visualmente dónde colocar la cinta y el plicómetro en el cuerpo del atleta:
-        </div>
-        """, unsafe_allow_html=True)
-        
-        g_col1, g_col2 = st.columns(2)
-        with g_col1:
-            st.markdown("**Tren Superior (Tronco y Brazos):**")
-            st.markdown("<div class='guia-card'><b>Tricipital:</b> Parte posterior del brazo (tríceps), a la mitad entre el hombro y el codo.</div>", unsafe_allow_html=True)
-            st.markdown("<div class='guia-card'><b>Subescapular:</b> Justo por debajo del omóplato (escápula) en diagonal.</div>", unsafe_allow_html=True)
-            st.markdown("<div class='guia-card'><b>Bicipital:</b> Cara anterior del brazo (bíceps), línea media frontal.</div>", unsafe_allow_html=True)
-            st.markdown("<div class='guia-card'><b>Cresta Ilíaca y Supraespinal:</b> Zona lateral de la cadera / cintura alta.</div>", unsafe_allow_html=True)
-            st.markdown("<div class='guia-card'><b>Abdominal:</b> A unos 2-3 cm al lado derecho del ombligo.</div>", unsafe_allow_html=True)
-        with g_col2:
-            st.markdown("**Tren Inferior y Perímetros:**")
-            st.markdown("<div class='guia-card'><b>Muslo Anterior:</b> En la línea media frontal del muslo, sentado o apoyado.</div>", unsafe_allow_html=True)
-            st.markdown("<div class='guia-card'><b>Pantorrilla:</b> Pliegue en la zona de mayor perímetro de la pantorrilla.</div>", unsafe_allow_html=True)
-            st.markdown("<div class='guia-card'><b>Brazo Relajado vs Contraído:</b> Medido a la altura máxima del bíceps (colgando vs haciendo fuerza).</div>", unsafe_allow_html=True)
-            st.markdown("<div class='guia-card'><b>Cintura:</b> A la altura de la cicatriz umbilical o la parte más estrecha del abdomen.</div>", unsafe_allow_html=True)
+    # --- MAPA ANATÓMICO VISUAL DEL CUERPO HUMANO ---
+    st.markdown("### 🗺️ Guía Visual del Cuerpo Humano (Puntos Antropométricos)")
+    st.markdown("Utiliza este esquema visual interactivo para ubicar exactamente cada zona de medición en el cuerpo de tu atleta:")
+
+    # Dibujo esquemático del cuerpo humano mediante SVG integrado de alta calidad visual
+    st.markdown("""
+    <div class="mapa-box">
+        <svg viewBox="0 0 600 320" width="100%" height="100%" style="max-height: 280px;">
+            <!-- Silueta humana estilizada central -->
+            <g fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.4">
+                <!-- Cabeza y cuello -->
+                <circle cx="300" cy="35" r="18"/>
+                <path d="M300 53 v20"/>
+                <!-- Tronco -->
+                <path d="M275 73 h50 l15 90 h-80 z"/>
+                <!-- Brazos -->
+                <path d="M275 73 l-35 50 l-25 45"/>
+                <path d="M325 73 l35 50 l25 45"/>
+                <!-- Piernas -->
+                <path d="M280 163 l-15 80 l-10 70"/>
+                <path d="M320 163 l15 80 l10 70"/>
+            </g>
+
+            <!-- Puntos interactivos señalados con líneas y etiquetas -->
+            <!-- Bicipital y Tricipital -->
+            <line x1="240" y1="110" x2="160" y2="80" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <circle cx="240" cy="110" r="4" fill="#f43f5e"/>
+            <text x="70" y="85" fill="#f8fafc" font-size="12" font-family="sans-serif">💪 Bicipital / Tricipital</text>
+
+            <!-- Subescapular -->
+            <line x1="310" y1="95" x2="420" y2="60" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <circle cx="310" cy="95" r="4" fill="#38bdf8"/>
+            <text x="430" y="65" fill="#f8fafc" font-size="12" font-family="sans-serif">🦴 Subescapular (Espalda)</text>
+
+            <!-- Cresta Ilíaca y Supraespinal -->
+            <line x1="325" y1="145" x2="430" y2="120" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <circle cx="325" cy="145" r="4" fill="#10b981"/>
+            <text x="435" y="125" fill="#f8fafc" font-size="12" font-family="sans-serif">📍 Cresta Ilíaca / Supraespinal</text>
+
+            <!-- Abdominal y Cintura -->
+            <line x1="300" y1="130" x2="150" y2="140" stroke="#eab308" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <circle cx="300" cy="130" r="4" fill="#eab308"/>
+            <text x="60" y="145" fill="#f8fafc" font-size="12" font-family="sans-serif">🎯 Abdominal / Cintura</text>
+
+            <!-- Muslo -->
+            <line x1="270" y1="210" x2="140" y2="200" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <circle cx="270" cy="210" r="4" fill="#a855f7"/>
+            <text x="75" y="205" fill="#f8fafc" font-size="12" font-family="sans-serif">🦵 Muslo Anterior</text>
+
+            <!-- Pantorrilla -->
+            <line x1="255" y1="280" x2="410" y2="260" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <circle cx="255" cy="280" r="4" fill="#06b6d4"/>
+            <text x="420" y="265" fill="#f8fafc" font-size="12" font-family="sans-serif">⚡ Pantorrilla Máxima</text>
+        </svg>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("### 📐 2. Pliegues Cutáneos (Protocolo ISAK - mm)")
     col_pl1, col_pl2, col_pl3, col_pl4 = st.columns(4)

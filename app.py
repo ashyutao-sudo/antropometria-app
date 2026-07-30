@@ -3,13 +3,49 @@ import pandas as pd
 import datetime
 import os
 
-# Configuración de la página
-st.set_page_config(page_title="Antropometría y Nutrición - Pro", layout="wide")
+# --- CONFIGURACIÓN Y ESTÉTICA VISUAL (MODERNA / NO MILITAR) ---
+st.set_page_config(page_title="Tropa | Antropometría y Rendimiento", layout="wide", page_icon="⚡")
 
-st.title("⚡ Sistema Antropométrico, Nutrición y Rendimiento")
+# Inyectamos CSS personalizado para un look minimalista, limpio y deportivo
+st.markdown("""
+    <style>
+    .main {
+        background-color: #0f172a;
+        color: #f8fafc;
+    }
+    .stButton>button {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    }
+    .stMetric {
+        background-color: #1e293b;
+        padding: 15px;
+        border-radius: 14px;
+        border: 1px solid #334155;
+    }
+    h1, h2, h3 {
+        color: #f8fafc;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Encabezado con identidad de equipo
+st.markdown("<h1 style='text-align: center; color: #38bdf8;'>⚡ TROPA PERFORMANCE LAB</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #94a3b8; font-size: 1.1rem;'>Sistema inteligente de antropometría, composición corporal y nutrición deportiva.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-ARCHIVO_HISTORIAL = "historial_antropometria.csv"
+ARCHIVO_HISTORIAL = "historial_antropometria_tropa.csv"
 
 def cargar_historial():
     if os.path.exists(ARCHIVO_HISTORIAL):
@@ -21,16 +57,16 @@ def cargar_historial():
 
 df_historial = cargar_historial()
 
-pestana_nueva, pestana_historial = st.tabs(["📝 Nueva Medición & Plan", "📈 Historial y Evolución"])
+pestana_nueva, pestana_historial = st.tabs(["📝 Nueva Medición & Plan", "📈 Historial de la Tropa"])
 
 with pestana_nueva:
-    st.header("1. Datos Generales y del Alumno")
+    st.markdown("### 👤 1. Perfil del Atleta")
 
     col_n1, col_n2 = st.columns(2)
     with col_n1:
-        nombre_alumno = st.text_input("Nombre / Identificación del Alumno", value="Alumno 1")
+        nombre_alumno = st.text_input("Nombre del Atleta", value="Atleta Tropa")
         disciplina = st.selectbox("Disciplina Principal", [
-            "🏋️‍♂️ Gimnasio (Fuerza / Hipertrofia / Estética)", 
+            "🏋️‍♂️ Gimnasio (Fuerza / Hipertrofia)", 
             "🏊‍♂️🚴‍♂️🏃‍♂️ Triatlón / Resistencia"
         ])
     with col_n2:
@@ -52,19 +88,19 @@ with pestana_nueva:
         nivel_actividad = st.selectbox("Nivel de Actividad Diaria", ["Alto (Entrena todos los días)", "Moderado (3-4 veces por semana)", "Liviano"])
         
         if "Gimnasio" in disciplina:
-            tipo_dia = st.selectbox("Tipo de entrenamiento de hoy", [
+            tipo_dia = st.selectbox("Enfoque de la sesión", [
                 "Día de Fuerza / Hipertrofia Pesada", 
                 "Día de Descanso / Recuperación"
             ])
         else:
-            tipo_dia = st.selectbox("Tipo de entrenamiento de hoy", [
-                "Fondo Largo (Alta demanda resistencia)", 
+            tipo_dia = st.selectbox("Enfoque de la sesión", [
+                "Fondo Largo (Resistencia extendida)", 
                 "Intensidad / Umbrales (Series)", 
                 "Recuperación / Suave", 
                 "Descanso Total"
             ])
 
-    st.subheader("2. Pliegues Cutáneos (mm) - Protocolo ISAK")
+    st.markdown("### 📐 2. Pliegues Cutáneos (Protocolo ISAK - mm)")
     col_pl1, col_pl2, col_pl3, col_pl4 = st.columns(4)
     with col_pl1:
         pliegue_tricipital = st.number_input("Tricipital (mm)", value=10.0)
@@ -79,18 +115,19 @@ with pestana_nueva:
         pliegue_muslo = st.number_input("Muslo anterior (mm)", value=15.0)
         pliegue_pantorrilla = st.number_input("Pantorrilla (mm)", value=10.0)
 
-    st.subheader("3. Perímetros Corporales (cm)")
+    st.markdown("### 📏 3. Perímetros Corporales (cm)")
     col_p1, col_p2, col_p3, col_p4 = st.columns(4)
     with col_p1:
-        brazo_relajado = st.number_input("Brazo extendido / relajado (cm)", value=30.0)
+        brazo_relajado = st.number_input("Brazo extendido (cm)", value=30.0)
     with col_p2:
-        brazo_contraido = st.number_input("Brazo flexionado / fuerza (cm)", value=34.0)
+        brazo_contraido = st.number_input("Brazo contraído (cm)", value=34.0)
     with col_p3:
         cintura = st.number_input("Cintura (cm)", value=80.0)
     with col_p4:
         pantorrilla_perimetro = st.number_input("Pantorrilla máx. (cm)", value=35.0)
 
-    if st.button("Calcular Plan Nutricional y Corporal", type="primary"):
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("🚀 Calcular Métricas y Plan de la Tropa", use_container_width=True):
         suma_pliegues = (pliegue_tricipital + pliegue_subescapular + pliegue_cresta_iliaca + 
                          pliegue_supraespinal + pliegue_muslo + pliegue_pantorrilla)
         
@@ -127,25 +164,19 @@ with pestana_nueva:
         else:
             tmb = (10 * peso) + (6.25 * altura) - (5 * edad) - 161
 
-        # Factor de actividad según disciplina
-        if "Gimnasio" in disciplina:
-            factor_dia = 1.5 if "Alto" in nivel_actividad else 1.35
-        else:
-            factor_dia = 1.9 if "Fondo" in tipo_dia else 1.6
+        factor_dia = 1.5 if "Gimnasio" in disciplina else 1.8
 
         gasto_total = tmb * factor_dia
         
-        # Ajuste de calorías según objetivo
         if "Pérdida de grasa" in objetivo:
             calorias_objetivo = gasto_total - 400
         elif "Hipertrofia" in objetivo:
-            calorias_objetivo = gasto_total + 300  # Superávit para ganar músculo
+            calorias_objetivo = gasto_total + 300  
         else:
             calorias_objetivo = gasto_total
 
-        # Macronutrientes ajustados según la disciplina
         if "Gimnasio" in disciplina:
-            prot = masa_magra_kg * 2.2  # Mayor proteína para síntesis de tejido muscular en gym
+            prot = masa_magra_kg * 2.2  
             gras = (calorias_objetivo * 0.25) / 9
             carb = (calorias_objetivo - (prot * 4) - (gras * 9)) / 4
         else:
@@ -154,37 +185,34 @@ with pestana_nueva:
             carb = (calorias_objetivo - (prot * 4) - (gras * 9)) / 4
 
         st.markdown("---")
-        st.header(f"📊 Resultados para: {nombre_alumno}")
+        st.markdown(f"### 📊 Resultados de Composición: {nombre_alumno}")
         res_col1, res_col2, res_col3, res_col4 = st.columns(4)
         res_col1.metric("Porcentaje de Grasa", f"{porcentaje_grasa:.1f}%", f"{masa_grasa_kg:.1f} kg")
         res_col2.metric("Masa Muscular", f"{masa_muscular_kg:.1f} kg")
         res_col3.metric("Masa Ósea", f"{masa_osea_kg:.1f} kg")
-        res_col4.metric("Diferencia Brazo (Fuerza)", f"+{brazo_contraido - brazo_relajado:.1f} cm")
+        res_col4.metric("Diferencia Brazo", f"+{brazo_contraido - brazo_relajado:.1f} cm")
 
         st.markdown("---")
-        st.header("🥗 Nutrición y Macronutrientes")
+        st.markdown("### 🥗 Plan Nutricional y Objetivos de Energía")
         nut_col1, nut_col2 = st.columns(2)
         with nut_col1:
-            st.info(f"**Gasto Total (TDEE):** {gasto_total:.0f} kcal")
-            st.success(f"**Calorías Objetivo ({objetivo}):** {calorias_objetivo:.0f} kcal")
-            
+            st.info(f"**Gasto Energético Total:** {gasto_total:.0f} kcal\n\n**Calorías Objetivo ({objetivo}):** {calorias_objetivo:.0f} kcal")
             if "Gimnasio" in disciplina:
-                st.warning("💪 **Enfoque Gimnasio:** Prioriza el descanso de 48-72h por grupo muscular y mantén un consumo constante de agua (35ml/kg) para optimizar el volumen celular e hipertrofia.")
+                st.warning("💡 **Nota Tropa (Gym):** Mantén la consistencia en el estímulo de sobrecarga y una buena hidratación diaria para maximizar la síntesis proteica.")
             else:
-                st.warning("🚴‍♂️ **Enfoque Triatlón:** Mantén atención en la carga de glucógeno y la hidratación intra-entreno.")
+                st.warning("💡 **Nota Tropa (Triatlón):** Vigila tus reservas de glucógeno y la hidratación con electrolitos según la sesión.")
 
         with nut_col2:
-            st.write("**Distribución de Macronutrientes:**")
-            st.text(f"- Proteínas: {prot:.0f} g ({prot*4:.0f} kcal)")
-            st.text(f"- Carbohidratos: {carb:.0f} g ({carb*4:.0f} kcal)")
-            st.text(f"- Grasas: {gras:.0f} g ({gras*9:.0f} kcal)")
+            st.markdown("**Distribución Ideal de Macronutrientes:**")
+            st.text(f"• Proteínas: {prot:.0f} g ({prot*4:.0f} kcal)")
+            st.text(f"• Carbohidratos: {carb:.0f} g ({carb*4:.0f} kcal)")
+            st.text(f"• Grasas: {gras:.0f} g ({gras*9:.0f} kcal)")
 
-        # Reporte descargable
         st.markdown("---")
         reporte_texto = f"""
 ==================================================
-INFORME ANTROPOMÉTRICO Y NUTRICIONAL
-Alumno: {nombre_alumno}
+TROPA PERFORMANCE LAB - INFORME NUTRICIONAL
+Atleta: {nombre_alumno}
 Fecha: {fecha_hoy}
 ==================================================
 - Disciplina: {disciplina}
@@ -195,7 +223,7 @@ Fecha: {fecha_hoy}
 - Porcentaje de grasa: {porcentaje_grasa:.1f}% ({masa_grasa_kg:.1f} kg)
 - Masa muscular: {masa_muscular_kg:.1f} kg
 - Masa ósea: {masa_osea_kg:.1f} kg
-- Diferencia de brazo (relajado vs contraído): +{brazo_contraido - brazo_relajado:.1f} cm
+- Tono / Diferencia de brazo: +{brazo_contraido - brazo_relajado:.1f} cm
 
 [PLAN NUTRICIONAL]
 - Calorías Objetivo: {calorias_objetivo:.0f} kcal
@@ -205,15 +233,16 @@ Fecha: {fecha_hoy}
 ==================================================
 """
         st.download_button(
-            label="📄 Descargar Informe del Alumno (.txt)",
+            label="📄 Descargar Informe Estilizado (.txt)",
             data=reporte_texto,
-            file_name=f"Informe_{nombre_alumno}_{fecha_hoy}.txt",
-            mime="text/plain"
+            file_name=f"Tropa_{nombre_alumno}_{fecha_hoy}.txt",
+            mime="text/plain",
+            use_container_width=True
         )
 
 with pestana_historial:
-    st.header("📈 Historial General de Alumnos")
+    st.markdown("### 📈 Base de Datos y Progreso de la Tropa")
     if len(df_historial) > 0:
         st.dataframe(df_historial, use_container_width=True)
     else:
-        st.info("No hay registros guardados todavía.")
+        st.info("Aún no se han registrado mediciones en el sistema de la Tropa.")

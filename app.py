@@ -204,19 +204,20 @@ with pestana_nueva:
             gras = (calorias_objetivo * 0.25) / 9
             carb = (calorias_objetivo - (prot * 4) - (gras * 9)) / 4
 
+        # Resultados limpios de composición (solo 3 métricas clave)
         st.markdown("---")
         st.markdown(f"### 📊 Resultados de Composición: {nombre_alumno}")
-        res_col1, res_col2, res_col3, res_col4 = st.columns(4)
+        res_col1, res_col2, res_col3 = st.columns(3)
         res_col1.metric("Porcentaje de Grasa", f"{porcentaje_grasa:.1f}%", f"{masa_grasa_kg:.1f} kg")
         res_col2.metric("Masa Muscular Est.", f"{masa_muscular_kg:.1f} kg")
         res_col3.metric("Masa Adiposa", f"{masa_grasa_kg:.1f} kg")
-        res_col4.metric("Tono Bíceps (C2-C1)", f"+{indice_tono_brazo:.1f} cm")
 
         st.markdown("---")
         st.markdown("### 🥗 Plan Nutricional y Objetivos de Energía")
         nut_col1, nut_col2 = st.columns(2)
         with nut_col1:
             st.info(f"**Gasto Energético Total:** {gasto_total:.0f} kcal\n\n**Calorías Objetivo ({objetivo}):** {calorias_objetivo:.0f} kcal")
+            st.markdown(f"💪 **Tono / Contracción de Bíceps:** +{indice_tono_brazo:.1f} cm (Indicador de desarrollo muscular local)")
         with nut_col2:
             st.markdown("**Distribución Ideal de Macronutrientes:**")
             st.text(f"• Proteínas: {prot:.0f} g ({prot*4:.0f} kcal)")
@@ -235,7 +236,21 @@ with pestana_nueva:
 *[COMPOSICIÓN CORPORAL ESTIMADA]*
 - Porcentaje de grasa: {porcentaje_grasa:.1f}% ({masa_grasa_kg:.1f} kg)
 - Masa muscular estimada: {masa_muscular_kg:.1f} kg
-- Tono / Diferencia de bíceps: +{indice_tono_brazo:.1f} cm
+
+[PERÍMETROS REGISTRADOS (Protocolo Oficial)]
+- A. Hombros: {p_hombros} cm
+- B. Pecho: {p_pecho} cm
+- C1. Bíceps relajado: {p_biceps_rel} cm
+- C2. Bíceps contraído: {p_biceps_con} cm (Diferencia: +{indice_tono_brazo:.1f} cm)
+- D. Antebrazo: {p_antebrazo} cm
+- E. Muñeca: {p_munecca} cm
+- F. Abdomen: {p_abdomen} cm
+- G. Cintura: {p_cintura} cm
+- H. Caderas: {p_caderas} cm
+- I. Muslo: {p_muslo} cm
+- J. Rodilla: {p_rodilla} cm
+- K. Gemelos: {p_gemelos} cm
+- L. Tobillo: {p_tobillo} cm
 
 *[PLAN NUTRICIONAL]*
 - Calorías Objetivo: {calorias_objetivo:.0f} kcal
@@ -244,7 +259,6 @@ with pestana_nueva:
 - Grasas: {gras:.0f} g
 """
 
-        # Botones de descarga y compartir por WhatsApp
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
             st.download_button(
